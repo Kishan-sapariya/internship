@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export function Login() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [errors, setErrors] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -18,7 +20,7 @@ export function Login() {
     setErrors("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
@@ -28,7 +30,38 @@ export function Login() {
       }, 3000);
       return;
     }
-    console.log("Login Data:", formData);
+    
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', 
+        body: JSON.stringify(formData),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+      
+      console.log('Login successful:', data);
+      
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      navigate('/dashboard');
+      
+    } catch (error) {
+      setErrors(error.message);
+      setTimeout(() => {
+        setErrors("");
+      }, 3000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,12 +111,13 @@ export function Login() {
           )}
           <button
             type="submit"
-            className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition duration-200 text-lg font-semibold mt-6"
+            disabled={loading}
+            className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition duration-200 text-lg font-semibold mt-2 cursor-pointer disabled:opacity-70"
           >
-            Log In
+            {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
-        <p className="text-center text-sm text-gray-600 mt-8">
+        <p className="text-center text-sm text-gray-600 mt-4">
           Don't have an account?{" "}
           <Link
             to="/signup"
